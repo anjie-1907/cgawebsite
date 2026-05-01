@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Transformations — CG & Animation 2026</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;500;600&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --gold: #FFE81A;
+  --gold-dim: #c9a800;
+  --gold-glow: rgba(255,232,26,0.18);
+  --blue: #4fc3f7;
+  --red: #ff4444;
+  --green: #00e676;
+  --dark: #02040a;
+  --dark2: #060c18;
+  --dark3: #0a1428;
+  --panel: rgba(6,12,24,0.92);
+  --border: rgba(255,232,26,0.22);
+  --text: #c8d8f0;
+  --muted: #4a6080;
+  --white: #e8f0ff;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'Exo 2', sans-serif;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* STARFIELD */
+#stars-canvas {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  z-index:0; pointer-events:none;
+}
+
+/* SCAN LINE OVERLAY */
+body::after {
+  content:'';
+  position: fixed; inset:0; z-index:999; pointer-events:none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px);
+}
+
+/* NAV */
+nav {
+  position: fixed; top:0; left:0; right:0; z-index:500;
+  height: 58px;
+  background: linear-gradient(180deg, rgba(2,4,10,0.97) 0%, rgba(2,4,10,0.8) 100%);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 0 36px;
+  backdrop-filter: blur(16px);
+}
+.nav-brand {
+  font-family: 'Orbitron', sans-serif; font-size:11px; font-weight:700;
+  letter-spacing: 5px; color: var(--gold); text-transform:uppercase;
+}
+.nav-brand span { color: var(--white); opacity:0.5; margin:0 8px; }
+.nav-links { display:flex; gap:28px; list-style:none; }
+.nav-links a {
+  font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:2px;
+  color: var(--muted); text-decoration:none; text-transform:uppercase; transition:color 0.25s;
+}
+.nav-links a:hover { color: var(--gold); }
+
+/* SECTIONS */
+section { position:relative; z-index:1; }
+
+/* ── CRAWL ── */
+#crawl {
+  min-height: 100vh;
+  background: #000;
+  display: flex; align-items:center; justify-content:center;
+  perspective: 420px;
+  overflow: hidden;
+}
+#crawl::before {
+  content:'';
+  position:absolute; bottom:0; left:0; right:0; height:35%;
+  background: linear-gradient(0deg, #000 0%, transparent 100%);
+  z-index:2; pointer-events:none;
+}
+#crawl::after {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:25%;
+  background: linear-gradient(180deg, #000 0%, transparent 100%);
+  z-index:2; pointer-events:none;
+}
+.crawl-body {
+  transform: rotateX(22deg);
+  transform-origin: 50% 100%;
+  text-align: center;
+  max-width: 580px; width:90%;
+  padding: 40px 24px 100px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
+}
+.crawl-ep {
+  font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:6px;
+  color: var(--gold); opacity:0.8; margin-bottom:28px;
+}
+.crawl-body h1 {
+  font-family:'Orbitron',sans-serif; font-size:clamp(24px,4vw,38px); font-weight:900;
+  color: var(--gold); line-height:1.25; margin-bottom:30px;
+  text-shadow: 0 0 30px rgba(255,232,26,0.5);
+}
+.crawl-body p {
+  font-size:14px; line-height:2; color:#8090a0; margin-bottom:12px;
+}
+.crawl-scroll {
+  position:absolute; bottom:26px; left:50%; transform:translateX(-50%);
+  font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:4px;
+  color: rgba(255,232,26,0.45); z-index:3; animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+
+/* ── HERO ── */
+#hero {
+  min-height: 100vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding: 80px 20px 60px; text-align:center;
+  background: radial-gradient(ellipse at 50% 55%, rgba(255,232,26,0.05) 0%, transparent 65%);
+}
+.hero-label {
+  font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:6px;
+  color: var(--gold); margin-bottom:18px; opacity:0.75;
+}
+.hero-h1 {
+  font-family:'Orbitron',sans-serif; font-size:clamp(30px,6.5vw,80px);
+  font-weight:900; color:#fff; line-height:1.05; margin-bottom:16px;
+  text-shadow: 0 0 80px rgba(255,232,26,0.3);
+}
+.hero-h1 em { color:var(--gold); font-style:normal; }
+.hero-sub {
+  font-size:16px; color:var(--muted); max-width:560px; line-height:1.75;
+  margin-bottom:44px; font-weight:300;
+}
+.badges { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:52px; }
+.badge {
+  font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px;
+  border:1px solid var(--border); color: var(--gold); padding:5px 12px;
+  text-transform:uppercase; background: rgba(255,232,26,0.03);
+}
+
+/* CSS 3D Planet */
+.planet-stage {
+  width:300px; height:300px; perspective:700px; margin:0 auto 16px;
+}
+.planet-ring {
+  width:100%; height:100%; transform-style:preserve-3d;
+  animation: spinY 22s linear infinite;
+}
+.planet-sphere {
+  width:300px; height:300px; border-radius:50%; overflow:hidden; position:relative;
+  background: radial-gradient(circle at 38% 35%, #2a3a55 0%, #111e30 45%, #050d18 100%);
+  box-shadow:
+    inset -35px -15px 55px rgba(0,0,0,0.85),
+    inset 15px 15px 50px rgba(255,232,26,0.07),
+    0 0 70px rgba(255,232,26,0.18),
+    0 0 140px rgba(255,232,26,0.06);
+}
+.p-grid {
+  position:absolute; inset:0; border-radius:50%; opacity:0.28;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(255,232,26,0.15) 20px, rgba(255,232,26,0.15) 21px),
+    repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,232,26,0.1) 20px, rgba(255,232,26,0.1) 21px);
+}
+.p-lights {
+  position:absolute; inset:0; border-radius:50%; mix-blend-mode:screen;
+  animation: lightPulse 3.5s ease-in-out infinite alternate;
+  background:
+    radial-gradient(circle at 28% 38%, rgba(255,220,60,0.65) 0%, transparent 3.5%),
+    radial-gradient(circle at 55% 28%, rgba(255,200,40,0.5) 0%, transparent 3%),
+    radial-gradient(circle at 72% 52%, rgba(255,220,60,0.7) 0%, transparent 4%),
+    radial-gradient(circle at 18% 62%, rgba(255,190,30,0.45) 0%, transparent 2.5%),
+    radial-gradient(circle at 82% 32%, rgba(255,210,50,0.55) 0%, transparent 3%),
+    radial-gradient(circle at 44% 70%, rgba(255,220,60,0.6) 0%, transparent 3.5%),
+    radial-gradient(circle at 60% 78%, rgba(255,190,30,0.4) 0%, transparent 2.5%),
+    radial-gradient(circle at 35% 50%, rgba(255,220,60,0.3) 0%, transparent 2%),
+    radial-gradient(circle at 75% 68%, rgba(255,210,50,0.5) 0%, transparent 3%),
+    radial-gradient(circle at 22% 22%, rgba(255,200,40,0.55) 0%, transparent 2.5%),
+    radial-gradient(circle at 66% 44%, rgba(255,220,60,0.4) 0%, transparent 2%),
+    radial-gradient(circle at 48% 15%, rgba(255,200,40,0.35) 0%, transparent 2%);
+}
+.p-atmo {
+  position:absolute; inset:-10px; border-radius:50%;
+  background: radial-gradient(circle at 35% 28%, rgba(79,195,247,0.1) 0%, transparent 45%);
+  pointer-events:none;
+}
+.p-shadow {
+  position:absolute; inset:0; border-radius:50%;
+  background: radial-gradient(circle at 70% 60%, transparent 25%, rgba(0,0,0,0.7) 75%);
+}
+@keyframes spinY { from{transform:rotateY(0)} to{transform:rotateY(360deg)} }
+@keyframes lightPulse { from{opacity:.75} to{opacity:1} }
+.planet-label {
+  font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:3px;
+  color: var(--muted); margin-top:4px; text-align:center;
+}
+
+/* ── SECTION CHROME ── */
+.sec-head { text-align:center; padding:80px 20px 48px; }
+.sec-tag {
+  font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:5px;
+  color:var(--gold); text-transform:uppercase; display:block; margin-bottom:12px;
+}
+.sec-h2 {
+  font-family:'Orbitron',sans-serif; font-size:clamp(22px,4vw,44px);
+  font-weight:700; color:#fff; line-height:1.2;
+}
+.sec-rule {
+  width:64px; height:2px; margin:18px auto 0;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/* ── OVERVIEW ── */
+#overview { padding:0 24px 80px; max-width:1080px; margin:0 auto; }
+.overview-grid { display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:start; }
+.overview-text p { font-size:15px; line-height:1.85; color:var(--text); margin-bottom:14px; }
+.overview-text strong { color:var(--gold); font-weight:600; }
+.datapad {
+  background:var(--panel); border:1px solid var(--border);
+  border-left:3px solid var(--gold); padding:22px; position:relative;
+}
+.datapad::before {
+  content:'DATAPAD'; position:absolute; top:-9px; left:14px;
+  font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:3px;
+  color:var(--gold); background:var(--dark2); padding:1px 8px;
+}
+.datapad li {
+  list-style:none; padding:7px 0;
+  border-bottom:1px solid rgba(255,232,26,0.08);
+  font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text);
+}
+.datapad li:last-child { border:none; }
+.datapad li b { color:var(--gold); margin-right:8px; }
+
+/* ── TRANSFORMS ── */
+#transforms { padding:0 20px 80px; }
+.t-wrap { max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:52px; }
+
+.t-card {
+  display:grid; grid-template-columns:1fr 1fr; background:var(--panel);
+  border:1px solid var(--border); position:relative; overflow:hidden;
+}
+.t-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.t-card.flip { direction:rtl; }
+.t-card.flip > * { direction:ltr; }
+
+.t-canvas-col {
+  background:var(--dark2); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:28px; gap:16px; min-height:400px;
+}
+.t-card.flip .t-canvas-col { border-right:none; border-left:1px solid var(--border); }
+
+canvas.demo { border:1px solid rgba(255,232,26,0.12); background:#010510; display:block; max-width:100%; }
+
+.controls { display:flex; flex-direction:column; gap:8px; width:100%; max-width:360px; }
+.ctrl-row { display:flex; align-items:center; gap:8px; }
+.ctrl-row label {
+  font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--muted);
+  width:24px; flex-shrink:0;
+}
+.ctrl-row input[type=range] {
+  flex:1; -webkit-appearance:none; height:2px;
+  background:linear-gradient(90deg, var(--gold) var(--pct,50%), rgba(255,232,26,0.15) var(--pct,50%));
+  outline:none; cursor:pointer; border-radius:2px;
+}
+.ctrl-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:12px; height:12px;
+  background:var(--gold); border-radius:50%; cursor:pointer;
+}
+.ctrl-row .val {
+  font-family:'Share Tech Mono',monospace; font-size:10px;
+  color:var(--gold); width:48px; text-align:right; flex-shrink:0;
+}
+.btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+.btn {
+  font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1px;
+  background:transparent; border:1px solid var(--border); color:var(--gold);
+  padding:6px 12px; cursor:pointer; text-transform:uppercase; transition:all .2s;
+}
+.btn:hover { background:var(--gold); color:#000; }
+.btn.b-red { border-color:#ff444477; color:#ff7777; }
+.btn.b-red:hover { background:#ff4444; color:#fff; border-color:#ff4444; }
+.btn.b-blue { border-color:#4fc3f777; color:var(--blue); }
+.btn.b-blue:hover { background:var(--blue); color:#000; border-color:var(--blue); }
+.btn.b-green { border-color:#00e67677; color:var(--green); }
+.btn.b-green:hover { background:var(--green); color:#000; border-color:var(--green); }
+
+.t-info-col { padding:34px 36px; }
+.t-num {
+  font-family:'Orbitron',sans-serif; font-size:52px; font-weight:900;
+  color:rgba(255,232,26,0.07); line-height:1; margin-bottom:2px;
+}
+.t-kind {
+  font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:4px;
+  color:var(--gold); text-transform:uppercase; margin-bottom:10px;
+}
+.t-title {
+  font-family:'Orbitron',sans-serif; font-size:20px; font-weight:700;
+  color:#fff; margin-bottom:14px;
+}
+.t-desc { font-size:14px; line-height:1.85; color:var(--text); margin-bottom:18px; }
+.matrix {
+  background:rgba(255,232,26,0.04); border:1px solid rgba(255,232,26,0.15);
+  padding:14px 16px; margin-bottom:18px;
+  font-family:'Share Tech Mono',monospace; font-size:11px; color:#d0e8c0;
+  line-height:2.1;
+}
+.matrix small { display:block; font-size:8px; letter-spacing:3px; color:var(--muted); margin-bottom:4px; }
+.feat { list-style:none; margin-bottom:16px; }
+.feat li {
+  padding:5px 0; font-size:13px; color:var(--text);
+  border-bottom:1px solid rgba(255,232,26,0.06);
+  padding-left:14px; position:relative;
+}
+.feat li::before { content:'›'; position:absolute; left:0; color:var(--gold); }
+.feat li:last-child { border:none; }
+.app-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip {
+  font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1px;
+  border:1px solid rgba(79,195,247,0.35); color:var(--blue);
+  padding:3px 9px; text-transform:uppercase;
+}
+
+/* ── KEY FEATURES ── */
+#features { padding:0 20px 80px; }
+.feat-grid { max-width:1080px; margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.feat-card {
+  background:var(--panel); border:1px solid var(--border);
+  padding:26px 22px; transition:border-color .3s, transform .3s; position:relative;
+}
+.feat-card::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--gold); }
+.feat-card:hover { border-color:rgba(255,232,26,0.5); transform:translateY(-3px); }
+.feat-icon { font-size:24px; margin-bottom:12px; }
+.feat-card h3 { font-family:'Orbitron',sans-serif; font-size:11px; color:var(--gold); margin-bottom:8px; letter-spacing:1px; }
+.feat-card p { font-size:12px; line-height:1.75; color:var(--muted); }
+
+/* ── APPLICATIONS ── */
+#applications { padding:0 20px 80px; }
+.app-grid { max-width:1080px; margin:0 auto; display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+.app-card {
+  background:var(--panel); border:1px solid var(--border);
+  padding:24px; display:flex; gap:18px; align-items:flex-start;
+  transition:border-color .3s;
+}
+.app-card:hover { border-color:rgba(79,195,247,0.5); }
+.app-n {
+  font-family:'Orbitron',sans-serif; font-size:30px; font-weight:900;
+  color:rgba(79,195,247,0.18); line-height:1; flex-shrink:0;
+}
+.app-card h3 { font-family:'Orbitron',sans-serif; font-size:11px; color:var(--blue); margin-bottom:6px; }
+.app-card p { font-size:12px; line-height:1.75; color:var(--muted); }
+
+/* ── MINI GAME ── */
+#game { padding:0 20px 80px; }
+.game-box {
+  max-width:860px; margin:0 auto;
+  background:var(--panel); border:1px solid var(--border);
+  padding:30px; position:relative;
+}
+.game-box::before {
+  content:'JEDI TRAINING TERMINAL'; position:absolute; top:-10px; left:24px;
+  font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:3px;
+  color:var(--gold); background:var(--dark2); padding:1px 10px;
+}
+.game-hud { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:18px; }
+.hud-item { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--muted); }
+.hud-item span { color:var(--gold); font-size:16px; }
+canvas#gc {
+  display:block; margin:0 auto 18px; border:1px solid var(--border);
+  background:#010510; max-width:100%;
+}
+.gq { text-align:center; font-family:'Orbitron',sans-serif; font-size:14px; color:var(--gold); min-height:24px; margin-bottom:16px; }
+.gchoices { display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:580px; margin:0 auto; }
+.gchoice {
+  background:transparent; border:1px solid var(--border); color:var(--text);
+  font-family:'Exo 2',sans-serif; font-size:13px; padding:12px;
+  cursor:pointer; transition:all .2s; text-align:center;
+}
+.gchoice:hover { border-color:var(--gold); color:var(--gold); }
+.gchoice.correct { border-color:var(--green); color:var(--green); background:rgba(0,230,118,.06); }
+.gchoice.wrong { border-color:var(--red); color:var(--red); background:rgba(255,68,68,.06); }
+.gfeedback { text-align:center; font-family:'Share Tech Mono',monospace; font-size:11px; min-height:20px; color:#a0c0a0; margin-top:14px; }
+.gstart {
+  display:block; margin:18px auto 0;
+  font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:3px;
+  background:transparent; border:2px solid var(--gold); color:var(--gold);
+  padding:12px 36px; cursor:pointer; transition:all .3s;
+}
+.gstart:hover { background:var(--gold); color:#000; }
+#govr { text-align:center; display:none; }
+#govr h2 { font-family:'Orbitron',sans-serif; font-size:24px; color:var(--gold); margin-bottom:8px; }
+#govr p { font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--text); margin-bottom:6px; }
+#govr .rank-txt { font-size:18px; color:var(--gold); }
+
+/* ── CONCLUSION ── */
+#conclusion { padding:0 20px 80px; }
+.conc-box {
+  max-width:820px; margin:0 auto;
+  background:var(--panel); border:1px solid var(--border);
+  padding:50px; text-align:center; position:relative;
+}
+.conc-box::before, .conc-box::after {
+  content:''; position:absolute; width:36px; height:36px;
+  border-color:var(--gold); border-style:solid;
+}
+.conc-box::before { top:14px; left:14px; border-width:2px 0 0 2px; }
+.conc-box::after { bottom:14px; right:14px; border-width:0 2px 2px 0; }
+.conc-box h2 { font-family:'Orbitron',sans-serif; font-size:26px; color:var(--gold); margin-bottom:18px; }
+.conc-box p { font-size:15px; line-height:1.9; color:var(--text); max-width:620px; margin:0 auto 14px; }
+.conc-pills { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:28px; }
+.cpill { background:rgba(255,232,26,.05); border:1px solid var(--border); padding:14px 18px; text-align:center; min-width:130px; }
+.cpill .ci { font-size:22px; margin-bottom:6px; }
+.cpill h4 { font-family:'Orbitron',sans-serif; font-size:9px; color:var(--gold); margin-bottom:4px; }
+.cpill p { font-size:11px; color:var(--muted); margin:0; }
+
+/* FOOTER */
+footer {
+  border-top:1px solid var(--border); padding:50px 24px 36px;
+  text-align:center; position:relative; z-index:1;
+  background:linear-gradient(0deg, rgba(255,232,26,0.02) 0%, transparent 100%);
+}
+.ft-brand { font-family:'Orbitron',sans-serif; font-size:14px; letter-spacing:4px; color:var(--gold); margin-bottom:18px; }
+.ft-rule { width:180px; height:1px; background:linear-gradient(90deg, transparent, var(--gold), transparent); margin:18px auto; }
+.ft-dev { font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--gold); letter-spacing:2px; }
+.ft-id { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:2px; margin-top:4px; }
+.ft-quote { font-size:12px; color:var(--muted); font-style:italic; margin-top:16px; }
+
+/* scrollbar */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--dark); }
+::-webkit-scrollbar-thumb { background:var(--gold-dim); }
+
+/* responsive */
+@media(max-width:780px){
+  .t-card, .overview-grid { grid-template-columns:1fr; }
+  .t-card.flip { direction:ltr; }
+  .t-canvas-col { border-right:none; border-bottom:1px solid var(--border); min-height:260px; }
+  .feat-grid { grid-template-columns:1fr; }
+  .app-grid { grid-template-columns:1fr; }
+  .nav-links { display:none; }
+  nav { padding:0 18px; }
+  .t-info-col { padding:22px 20px; }
+  .conc-box { padding:30px 18px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">3D Transforms <span>|</span> CG&amp;A 2026</div>
+  <ul class="nav-links">
+    <li><a href="#crawl">Intro</a></li>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#transforms">Transforms</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#applications">Applications</a></li>
+    <li><a href="#game">Challenge</a></li>
+    <li><a href="#conclusion">End</a></li>
+  </ul>
+</nav>
+
+<!-- CRAWL -->
+<section id="crawl">
+  <div class="crawl-body">
+    <div class="crawl-ep">CG &amp; Animation 2026 ✦ A Long Time Ago In A Pipeline Far, Far Away...</div>
+    <h1>THE MATHEMATICS<br>OF MOTION</h1>
+    <p>In a galaxy where every pixel obeys the sacred laws of linear algebra, Jedi Masters of Computer Graphics pass down the ancient knowledge of 3D Transformations — the Force that shapes all visual reality.</p>
+    <p>Every lightsaber swing, every starship banking through hyperspace, every city spire rising from Coruscant's endless urban sprawl — all governed by three elemental operations: Translation, Rotation, and Scaling.</p>
+    <p>Young Padawans, your training begins. Master these transforms and the entire galaxy of visual computing shall answer to you.</p>
+    <p>May the matrix be with you.</p>
+  </div>
+  <div class="crawl-scroll">↓ &nbsp; scroll to begin &nbsp; ↓</div>
+</section>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-label">Computer Graphics &amp; Animation — Class of 2026</div>
+  <h1 class="hero-h1">Mastering <em>3D</em><br>Transformations</h1>
+  <p class="hero-sub">The mathematical operations that move, rotate, and resize every object in the 3D universe — from game engines to galactic film effects.</p>
+  <div class="badges">
+    <span class="badge">Translation</span>
+    <span class="badge">Rotation X</span>
+    <span class="badge">Rotation Y</span>
+    <span class="badge">Rotation Z</span>
+    <span class="badge">Scaling</span>
+    <span class="badge">4×4 Matrices</span>
+    <span class="badge">Interactive</span>
+  </div>
+  <div class="planet-stage">
+    <div class="planet-ring">
+      <div class="planet-sphere">
+        <div class="p-grid"></div>
+        <div class="p-lights"></div>
+        <div class="p-shadow"></div>
+        <div class="p-atmo"></div>
+      </div>
+    </div>
+  </div>
+  <div class="planet-label">✦ CORUSCANT — GALACTIC CAPITAL — ECUMENOPOLIS ✦</div>
+</section>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="sec-head">
+    <span class="sec-tag">Module 001</span>
+    <h2 class="sec-h2">What Are 3D Transformations?</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <div class="overview-grid">
+    <div class="overview-text">
+      <p>3D transformations are <strong>mathematical operations</strong> that change the position, orientation, or size of objects within a three-dimensional coordinate system. They are the bedrock of every visual computing application — from real-time games to feature film VFX.</p>
+      <p>In computer graphics, objects are represented as collections of vertices — points defined by <strong>(X, Y, Z)</strong> coordinates. Transformations are applied using <strong>matrix multiplication</strong>, making them fast, composable, and GPU-acceleratable.</p>
+      <p>By using homogeneous coordinates — adding a 4th component <strong>w = 1</strong> — all affine transformations (translation, rotation, scaling) unify into a single 4×4 matrix framework, enabling one-pass computation of complex multi-step transforms.</p>
+      <p>Just as Coruscant is built layer upon layer of civilization stacked across millennia, complex 3D scenes are composed by chaining simple transformations — each one a building block of the final rendered image.</p>
+    </div>
+    <div class="datapad">
+      <ul>
+        <li><b>TYPE 01</b> Translation — Displacement in X, Y, Z</li>
+        <li><b>TYPE 02</b> Rotation X — Pitch around the X-axis</li>
+        <li><b>TYPE 03</b> Rotation Y — Yaw around the Y-axis</li>
+        <li><b>TYPE 04</b> Rotation Z — Roll around the Z-axis</li>
+        <li><b>TYPE 05</b> Scaling — Resize uniformly or per-axis</li>
+        <li><b>MATH</b> Homogeneous 4×4 Matrix Algebra</li>
+        <li><b>PIPELINE</b> CPU → Vertex Shader → GPU Rasterizer</li>
+        <li><b>USED IN</b> Games, Film, CAD, AR/VR, Robotics</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSFORMS -->
+<section id="transforms">
+  <div class="sec-head">
+    <span class="sec-tag">Module 002</span>
+    <h2 class="sec-h2">Interactive 3D Transformations</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <div class="t-wrap">
+
+    <!-- 01 TRANSLATION -->
+    <div class="t-card" id="tc-trans">
+      <div class="t-canvas-col">
+        <canvas class="demo" id="cv-trans" width="340" height="280"></canvas>
+        <div class="controls">
+          <div class="ctrl-row"><label>TX</label><input type="range" id="tx" min="-100" max="100" value="0"><span class="val" id="tx-v">0</span></div>
+          <div class="ctrl-row"><label>TY</label><input type="range" id="ty" min="-80" max="80" value="0"><span class="val" id="ty-v">0</span></div>
+          <div class="ctrl-row"><label>TZ</label><input type="range" id="tz" min="-60" max="60" value="0"><span class="val" id="tz-v">0</span></div>
+          <div class="btn-row">
+            <button class="btn" onclick="resetTrans()">RESET</button>
+            <button class="btn b-green" onclick="animTrans()">ANIMATE</button>
+          </div>
+        </div>
+      </div>
+      <div class="t-info-col">
+        <div class="t-num">01</div>
+        <div class="t-kind">Transformation Type</div>
+        <h2 class="t-title">Translation</h2>
+        <p class="t-desc">Translation displaces an object from one point in space to another without altering its shape or orientation. It is defined by three offset values — one per axis. In the 4×4 homogeneous framework, translation is encoded in the rightmost column, allowing it to be multiplied with other transforms seamlessly.</p>
+        <div class="matrix">
+          <small>TRANSLATION MATRIX T(Tx, Ty, Tz)</small>
+          [ 1  0  0  Tx ]<br>
+          [ 0  1  0  Ty ]<br>
+          [ 0  0  1  Tz ]<br>
+          [ 0  0  0   1 ]
+        </div>
+        <ul class="feat">
+          <li>Moves every vertex by the same (Tx, Ty, Tz) offset</li>
+          <li>Homogeneous form lets translation compose via matrix multiply</li>
+          <li>Inverse: negate Tx, Ty, Tz</li>
+          <li>TZ creates near/far depth in perspective projection</li>
+        </ul>
+        <div class="app-chips">
+          <span class="chip">Character Animation</span>
+          <span class="chip">Camera Movement</span>
+          <span class="chip">Physics Sim</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 ROTATION X -->
+    <div class="t-card flip" id="tc-rx">
+      <div class="t-canvas-col">
+        <canvas class="demo" id="cv-rx" width="340" height="280"></canvas>
+        <div class="controls">
+          <div class="ctrl-row"><label>θ</label><input type="range" id="rx-a" min="0" max="360" value="0"><span class="val" id="rx-v">0°</span></div>
+          <div class="btn-row">
+            <button class="btn" onclick="resetRX()">RESET</button>
+            <button class="btn b-red" onclick="animRX()">SPIN</button>
+          </div>
+        </div>
+      </div>
+      <div class="t-info-col">
+        <div class="t-num">02</div>
+        <div class="t-kind">Transformation Type</div>
+        <h2 class="t-title">Rotation Around X-Axis (Pitch)</h2>
+        <p class="t-desc">Rotating around the X-axis is called <em>pitch</em> — it tilts the object nose-up or nose-down, sweeping points through the YZ plane. The X-coordinates of all vertices remain unchanged while Y and Z mix via sine and cosine, producing the rotation effect.</p>
+        <div class="matrix">
+          <small>ROTATION MATRIX Rx(θ)</small>
+          [ 1    0       0    0 ]<br>
+          [ 0  cos θ  −sin θ  0 ]<br>
+          [ 0  sin θ   cos θ  0 ]<br>
+          [ 0    0       0    1 ]
+        </div>
+        <ul class="feat">
+          <li>Rotates points in the Y–Z plane; X unchanged</li>
+          <li>θ in radians internally; converted from degrees in UI</li>
+          <li>Pitch: nose-up (−θ) / nose-down (+θ) analogy</li>
+          <li>Gimbal lock risk when combined with Ry and Rz in Euler order</li>
+        </ul>
+        <div class="app-chips">
+          <span class="chip">Flight Simulation</span>
+          <span class="chip">Head Tracking</span>
+          <span class="chip">Camera Tilt</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 ROTATION Y -->
+    <div class="t-card" id="tc-ry">
+      <div class="t-canvas-col">
+        <canvas class="demo" id="cv-ry" width="340" height="280"></canvas>
+        <div class="controls">
+          <div class="ctrl-row"><label>θ</label><input type="range" id="ry-a" min="0" max="360" value="0"><span class="val" id="ry-v">0°</span></div>
+          <div class="btn-row">
+            <button class="btn" onclick="resetRY()">RESET</button>
+            <button class="btn b-blue" onclick="animRY()">SPIN</button>
+          </div>
+        </div>
+      </div>
+      <div class="t-info-col">
+        <div class="t-num">03</div>
+        <div class="t-kind">Transformation Type</div>
+        <h2 class="t-title">Rotation Around Y-Axis (Yaw)</h2>
+        <p class="t-desc">Rotating around the Y-axis is called <em>yaw</em> — it turns the object left or right, rotating points in the XZ plane. This is the natural "look left / look right" motion used in virtually every 3D viewer, turntable animation, and character locomotion system.</p>
+        <div class="matrix">
+          <small>ROTATION MATRIX Ry(θ)</small>
+          [  cos θ  0  sin θ  0 ]<br>
+          [    0    1    0    0 ]<br>
+          [ −sin θ  0  cos θ  0 ]<br>
+          [    0    0    0    1 ]
+        </div>
+        <ul class="feat">
+          <li>Rotates points in the X–Z plane; Y unchanged</li>
+          <li>Most common rotation axis in object-viewer UIs</li>
+          <li>Positive θ: clockwise from above in right-hand system</li>
+          <li>Drives turntable renders and 360° product shots</li>
+        </ul>
+        <div class="app-chips">
+          <span class="chip">Turntable Render</span>
+          <span class="chip">Vehicle Steering</span>
+          <span class="chip">360° Viewer</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 ROTATION Z -->
+    <div class="t-card flip" id="tc-rz">
+      <div class="t-canvas-col">
+        <canvas class="demo" id="cv-rz" width="340" height="280"></canvas>
+        <div class="controls">
+          <div class="ctrl-row"><label>θ</label><input type="range" id="rz-a" min="0" max="360" value="0"><span class="val" id="rz-v">0°</span></div>
+          <div class="btn-row">
+            <button class="btn" onclick="resetRZ()">RESET</button>
+            <button class="btn b-green" onclick="animRZ()">SPIN</button>
+          </div>
+        </div>
+      </div>
+      <div class="t-info-col">
+        <div class="t-num">04</div>
+        <div class="t-kind">Transformation Type</div>
+        <h2 class="t-title">Rotation Around Z-Axis (Roll)</h2>
+        <p class="t-desc">Rotating around the Z-axis is called <em>roll</em> — it spins the object like a wheel, rotating points in the XY screen plane. This is the classic 2D rotation extended into 3D, used for banking aircraft, spinning projectiles, and animating coin-flips.</p>
+        <div class="matrix">
+          <small>ROTATION MATRIX Rz(θ)</small>
+          [ cos θ  −sin θ  0  0 ]<br>
+          [ sin θ   cos θ  0  0 ]<br>
+          [   0       0    1  0 ]<br>
+          [   0       0    0  1 ]
+        </div>
+        <ul class="feat">
+          <li>Rotates points in the X–Y plane; Z unchanged</li>
+          <li>Identical to standard 2D rotation in screen-space</li>
+          <li>Used for banking, rolling, and spin animations</li>
+          <li>Combine Rx·Ry·Rz for full Euler orientation</li>
+        </ul>
+        <div class="app-chips">
+          <span class="chip">Aircraft Banking</span>
+          <span class="chip">Spinning FX</span>
+          <span class="chip">2D UI Rotation</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 SCALING -->
+    <div class="t-card" id="tc-scale">
+      <div class="t-canvas-col">
+        <canvas class="demo" id="cv-scale" width="340" height="280"></canvas>
+        <div class="controls">
+          <div class="ctrl-row"><label>Sx</label><input type="range" id="sx" min="10" max="220" value="100"><span class="val" id="sx-v">1.0</span></div>
+          <div class="ctrl-row"><label>Sy</label><input type="range" id="sy" min="10" max="220" value="100"><span class="val" id="sy-v">1.0</span></div>
+          <div class="ctrl-row"><label>Sz</label><input type="range" id="sz" min="10" max="220" value="100"><span class="val" id="sz-v">1.0</span></div>
+          <div class="btn-row">
+            <button class="btn" onclick="resetScale()">RESET</button>
+            <button class="btn b-red" onclick="animScale()">BREATHE</button>
+          </div>
+        </div>
+      </div>
+      <div class="t-info-col">
+        <div class="t-num">05</div>
+        <div class="t-kind">Transformation Type</div>
+        <h2 class="t-title">Scaling</h2>
+        <p class="t-desc">Scaling changes the size of an object along one or more axes. <em>Uniform scaling</em> (Sx = Sy = Sz) preserves the object's shape while changing its size. <em>Non-uniform scaling</em> applies different factors per axis, creating stretch or squash effects. Negative scale values produce mirror reflections.</p>
+        <div class="matrix">
+          <small>SCALING MATRIX S(Sx, Sy, Sz)</small>
+          [ Sx   0   0   0 ]<br>
+          [  0  Sy   0   0 ]<br>
+          [  0   0  Sz   0 ]<br>
+          [  0   0   0   1 ]
+        </div>
+        <ul class="feat">
+          <li>Uniform: Sx=Sy=Sz — size changes, shape preserved</li>
+          <li>Non-uniform: stretch/squash for animation principles</li>
+          <li>Negative values: mirror reflection about that axis</li>
+          <li>Scale about pivot: compose as T · S · T⁻¹</li>
+        </ul>
+        <div class="app-chips">
+          <span class="chip">Squash &amp; Stretch</span>
+          <span class="chip">Mirroring</span>
+          <span class="chip">LOD Systems</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- KEY FEATURES -->
+<section id="features">
+  <div class="sec-head">
+    <span class="sec-tag">Module 003</span>
+    <h2 class="sec-h2">Key Features</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-icon">⬡</div><h3>Matrix Composition</h3><p>Multiple transforms chain into a single 4×4 matrix via multiplication. T·R·S computes the full TRS transform in one GPU-efficient pass.</p></div>
+    <div class="feat-card"><div class="feat-icon">◈</div><h3>Homogeneous Coordinates</h3><p>The 4th coordinate (w=1) lets translation be expressed as a matrix multiply, unifying all affine transforms into one elegant framework.</p></div>
+    <div class="feat-card"><div class="feat-icon">⟳</div><h3>Invertibility</h3><p>Every transform has an exact inverse — negate offsets for translation, negate angle for rotation, reciprocal for scale — critical for view and physics.</p></div>
+    <div class="feat-card"><div class="feat-icon">△</div><h3>Order Sensitivity</h3><p>Matrix multiplication is non-commutative: R·T ≠ T·R. The order of composition dramatically changes the result — sequence matters profoundly.</p></div>
+    <div class="feat-card"><div class="feat-icon">❖</div><h3>GPU Acceleration</h3><p>Modern GPUs execute billions of matrix multiplications per second in parallel vertex shaders, enabling real-time rendering of millions of transformed vertices.</p></div>
+    <div class="feat-card"><div class="feat-icon">⬢</div><h3>Scene Hierarchies</h3><p>Parent–child transform trees propagate down the hierarchy. Moving a parent automatically repositions all children, enabling skeleton-driven animation.</p></div>
+  </div>
+</section>
+
+<!-- APPLICATIONS -->
+<section id="applications">
+  <div class="sec-head">
+    <span class="sec-tag">Module 004</span>
+    <h2 class="sec-h2">Applications Across the Galaxy</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <div class="app-grid">
+    <div class="app-card"><div class="app-n">01</div><div><h3>Film VFX &amp; Animation</h3><p>Every CGI character, spaceship, and environment in films relies entirely on transformation matrices to place, animate, and composite objects within virtual scenes.</p></div></div>
+    <div class="app-card"><div class="app-n">02</div><div><h3>Game Engines</h3><p>Unreal, Unity, and Godot manage transform hierarchies for every game object — characters, weapons, particles — updated at 60+ FPS every frame.</p></div></div>
+    <div class="app-card"><div class="app-n">03</div><div><h3>Robotics &amp; Kinematics</h3><p>Forward kinematics chains use rotational transforms to compute end-effector positions from joint angles in surgical robots and industrial arms.</p></div></div>
+    <div class="app-card"><div class="app-n">04</div><div><h3>AR / VR / XR</h3><p>HMDs update camera transforms every millisecond from IMU sensors, anchoring virtual objects to real-world positions with sub-millimeter accuracy.</p></div></div>
+    <div class="app-card"><div class="app-n">05</div><div><h3>Medical Imaging</h3><p>CT and MRI scan volumes are rendered in 3D using scaling and rotation transforms, letting radiologists inspect data from any angle for diagnosis.</p></div></div>
+    <div class="app-card"><div class="app-n">06</div><div><h3>CAD &amp; Architecture</h3><p>Engineers assemble complex structures from reusable components, placing and scaling parts precisely within a scene using parametric transforms.</p></div></div>
+  </div>
+</section>
+
+<!-- MINI GAME -->
+<section id="game">
+  <div class="sec-head">
+    <span class="sec-tag">Module 005</span>
+    <h2 class="sec-h2">Jedi Training Challenge</h2>
+    <div class="sec-rule"></div>
+    <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:10px">Observe the transformation — identify it correctly. Earn your rank.</p>
+  </div>
+  <div class="game-box">
+    <div class="game-hud">
+      <div class="hud-item">SCORE <span id="gscore">0</span></div>
+      <div class="hud-item">QUESTION <span id="gq">—</span>/10</div>
+      <div class="hud-item">RANK <span id="grank">—</span></div>
+      <div class="hud-item">TIME <span id="gtimer">—</span></div>
+    </div>
+    <canvas id="gc" width="540" height="260"></canvas>
+    <div class="gq" id="gquestion">Press BEGIN to start your Jedi training.</div>
+    <div class="gchoices" id="gchoices" style="display:none"></div>
+    <div class="gfeedback" id="gfeedback"></div>
+    <button class="gstart" id="gbtn" onclick="gameStart()">⟶ BEGIN TRAINING</button>
+    <div id="govr">
+      <h2>Training Complete</h2>
+      <p id="gfinal"></p>
+      <p class="rank-txt" id="granktxt"></p>
+      <button class="gstart" style="margin-top:14px" onclick="gameStart()">TRAIN AGAIN</button>
+    </div>
+  </div>
+</section>
+
+<!-- CONCLUSION -->
+<section id="conclusion">
+  <div class="sec-head">
+    <span class="sec-tag">Module 006</span>
+    <h2 class="sec-h2">Conclusion</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <div class="conc-box">
+    <h2>The Force of Linear Algebra</h2>
+    <p>3D transformations are the invisible skeleton beneath every visual computing application. Translation, Rotation about X, Y, and Z axes, and Scaling — each expressed as a 4×4 matrix — form the complete language of motion in three-dimensional space.</p>
+    <p>Composed together through matrix multiplication, these five operations give artists and engineers total creative control over virtual worlds. From the vertex shader running on your GPU to the motion-capture pipeline of a blockbuster film, they operate silently but ceaselessly.</p>
+    <p style="font-style:italic;color:rgba(255,232,26,0.75)">"In the realm of computer graphics, the matrix is the Force — it surrounds us, penetrates us, and binds the scene together."</p>
+    <div class="conc-pills">
+      <div class="cpill"><div class="ci">➔</div><h4>Translation</h4><p>3D Displacement</p></div>
+      <div class="cpill"><div class="ci">↕</div><h4>Rotation X</h4><p>Pitch</p></div>
+      <div class="cpill"><div class="ci">↔</div><h4>Rotation Y</h4><p>Yaw</p></div>
+      <div class="cpill"><div class="ci">↺</div><h4>Rotation Z</h4><p>Roll</p></div>
+      <div class="cpill"><div class="ci">⤢</div><h4>Scaling</h4><p>Resize</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="ft-brand">3D Transformations ✦ CG &amp; Animation 2026</div>
+  <div class="ft-rule"></div>
+  <div class="ft-dev">Developed by Anjela Kumar</div>
+  <div class="ft-id">RA2411003010234</div>
+  <div class="ft-rule"></div>
+  <div class="ft-quote">"A long time ago in a pipeline far, far away — every pixel was placed by a matrix."</div>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════
+   STARFIELD
+═══════════════════════════════════════════ */
+(()=>{
+  const c=document.getElementById('stars-canvas'), ctx=c.getContext('2d');
+  let stars=[];
+  const resize=()=>{ c.width=innerWidth; c.height=innerHeight; };
+  resize(); addEventListener('resize',resize);
+  for(let i=0;i<280;i++) stars.push({
+    x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+    r:Math.random()*1.5+0.2, a:Math.random(), da:Math.random()*0.005+0.001
+  });
+  const tick=()=>{
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s=>{
+      s.a+=s.da; if(s.a>1||s.a<0)s.da=-s.da;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,220,255,${s.a})`; ctx.fill();
+    });
+    requestAnimationFrame(tick);
+  };
+  tick();
+})();
+
+/* ═══════════════════════════════════════════
+   RANGE SLIDER FILL SYNC
+═══════════════════════════════════════════ */
+document.querySelectorAll('input[type=range]').forEach(inp=>{
+  const sync=()=>{
+    const pct=((inp.value-inp.min)/(inp.max-inp.min)*100)+'%';
+    inp.style.setProperty('--pct',pct);
+  };
+  inp.addEventListener('input',sync); sync();
+});
+
+/* ═══════════════════════════════════════════
+   SHARED CANVAS HELPERS
+═══════════════════════════════════════════ */
+function grid(ctx,w,h){
+  ctx.strokeStyle='rgba(255,232,26,0.05)'; ctx.lineWidth=1;
+  for(let x=0;x<=w;x+=28){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=0;y<=h;y+=28){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+}
+function axes(ctx,cx,cy,len=55){
+  ctx.lineWidth=1.5;
+  ctx.strokeStyle='#ff5555'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+len,cy); ctx.stroke();
+  ctx.fillStyle='#ff5555'; ctx.font='10px Share Tech Mono'; ctx.fillText('X',cx+len+3,cy+4);
+  ctx.strokeStyle='#55ee88'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy-len); ctx.stroke();
+  ctx.fillStyle='#55ee88'; ctx.fillText('Y',cx-14,cy-len+2);
+  ctx.strokeStyle='#55aaff'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+len*.5,cy+len*.5); ctx.stroke();
+  ctx.fillStyle='#55aaff'; ctx.fillText('Z',cx+len*.5+3,cy+len*.5+4);
+}
+function label(ctx,txt,x,y){
+  ctx.font='9px Share Tech Mono'; ctx.fillStyle='rgba(255,232,26,0.55)'; ctx.fillText(txt,x,y);
+}
+
+/* Draw a simple 3D cube wireframe projected orthographically with given rotation + scale */
+function cube(ctx,cx,cy, rx,ry,rz, sx,sy){
+  const pts=[
+    [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+    [-1,-1, 1],[1,-1, 1],[1,1, 1],[-1,1, 1]
+  ];
+  function rotX(p,a){const c=Math.cos(a),s=Math.sin(a);return[p[0],p[1]*c-p[2]*s,p[1]*s+p[2]*c];}
+  function rotY(p,a){const c=Math.cos(a),s=Math.sin(a);return[p[0]*c+p[2]*s,p[1],-p[0]*s+p[2]*c];}
+  function rotZ(p,a){const c=Math.cos(a),s=Math.sin(a);return[p[0]*c-p[1]*s,p[0]*s+p[1]*c,p[2]];}
+  function proj(p){return[cx+p[0]*sx, cy-p[1]*sy];}
+  const tf=pts.map(p=>{ let q=rotX(p,rx); q=rotY(q,ry); q=rotZ(q,rz); return q; });
+  const p2=tf.map(proj);
+  const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  ctx.strokeStyle='rgba(255,232,26,0.7)'; ctx.lineWidth=1.5;
+  edges.forEach(([a,b])=>{
+    ctx.beginPath(); ctx.moveTo(p2[a][0],p2[a][1]); ctx.lineTo(p2[b][0],p2[b][1]); ctx.stroke();
+  });
+  p2.forEach(([x,y])=>{
+    ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2);
+    ctx.fillStyle='#FFE81A'; ctx.fill();
+  });
+}
+
+/* ═══════════════════════════════════════════
+   TRANSLATION DEMO
+═══════════════════════════════════════════ */
+let transAnim=null;
+function drawTrans(tx,ty,tz){
+  const c=document.getElementById('cv-trans'), ctx=c.getContext('2d');
+  const w=c.width,h=c.height,cx=w/2,cy=h/2;
+  ctx.clearRect(0,0,w,h); grid(ctx,w,h); axes(ctx,cx,cy);
+  // ghost
+  ctx.globalAlpha=0.18; cube(ctx,cx,cy, 0,0,0, 36,36); ctx.globalAlpha=1;
+  // perspective depth
+  const d=200, z=tz*.4, sc=d/(d+z);
+  const nx=cx+tx*sc, ny=cy-ty*sc;
+  cube(ctx,nx,ny, 0,0,0, 36*sc,36*sc);
+  // arrow
+  ctx.strokeStyle='rgba(255,232,26,0.4)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(nx,ny); ctx.stroke();
+  ctx.setLineDash([]);
+  label(ctx,`T(${Math.round(tx)}, ${Math.round(ty)}, ${Math.round(tz)})`,8,16);
+}
+document.getElementById('tx').oninput=
+document.getElementById('ty').oninput=
+document.getElementById('tz').oninput=()=>{
+  cancelAnimationFrame(transAnim); transAnim=null;
+  const tx=+document.getElementById('tx').value;
+  const ty=+document.getElementById('ty').value;
+  const tz=+document.getElementById('tz').value;
+  document.getElementById('tx-v').textContent=Math.round(tx);
+  document.getElementById('ty-v').textContent=Math.round(ty);
+  document.getElementById('tz-v').textContent=Math.round(tz);
+  drawTrans(tx,ty,tz);
+};
+function resetTrans(){
+  cancelAnimationFrame(transAnim); transAnim=null;
+  ['tx','ty','tz'].forEach(id=>{
+    document.getElementById(id).value=0;
+    document.getElementById(id).dispatchEvent(new Event('input'));
+  });
+  drawTrans(0,0,0);
+}
+function animTrans(){
+  cancelAnimationFrame(transAnim);
+  let t=0;
+  const step=()=>{
+    t+=0.03;
+    const tx=Math.sin(t)*85, ty=Math.cos(t*.7)*55, tz=Math.sin(t*.5)*50;
+    document.getElementById('tx').value=tx; document.getElementById('tx-v').textContent=Math.round(tx);
+    document.getElementById('ty').value=ty; document.getElementById('ty-v').textContent=Math.round(ty);
+    document.getElementById('tz').value=tz; document.getElementById('tz-v').textContent=Math.round(tz);
+    drawTrans(tx,ty,tz);
+    transAnim=requestAnimationFrame(step);
+  };
+  step();
+}
+drawTrans(0,0,0);
+
+/* ═══════════════════════════════════════════
+   ROTATION X DEMO
+═══════════════════════════════════════════ */
+let rxAnim=null;
+function drawRX(deg){
+  const c=document.getElementById('cv-rx'), ctx=c.getContext('2d');
+  const w=c.width,h=c.height,cx=w/2,cy=h/2;
+  ctx.clearRect(0,0,w,h); grid(ctx,w,h); axes(ctx,cx,cy);
+  const rad=deg*Math.PI/180;
+  // orbit circle in YZ
+  ctx.strokeStyle='rgba(255,100,100,0.2)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.ellipse(cx,cy,36,36*Math.abs(Math.cos(rad))||1,0,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  cube(ctx,cx,cy, rad,0,0, 38,38);
+  label(ctx,`Rx: ${deg}°  cos=${Math.cos(rad).toFixed(2)}  sin=${Math.sin(rad).toFixed(2)}`,8,16);
+}
+document.getElementById('rx-a').oninput=function(){
+  cancelAnimationFrame(rxAnim); rxAnim=null;
+  document.getElementById('rx-v').textContent=this.value+'°';
+  drawRX(+this.value);
+};
+function resetRX(){ cancelAnimationFrame(rxAnim); rxAnim=null; document.getElementById('rx-a').value=0; document.getElementById('rx-v').textContent='0°'; drawRX(0); }
+function animRX(){ cancelAnimationFrame(rxAnim); let a=0; const s=()=>{ a=(a+2)%360; document.getElementById('rx-a').value=a; document.getElementById('rx-v').textContent=a+'°'; drawRX(a); rxAnim=requestAnimationFrame(s); }; s(); }
+drawRX(0);
+
+/* ═══════════════════════════════════════════
+   ROTATION Y DEMO
+═══════════════════════════════════════════ */
+let ryAnim=null;
+function drawRY(deg){
+  const c=document.getElementById('cv-ry'), ctx=c.getContext('2d');
+  const w=c.width,h=c.height,cx=w/2,cy=h/2;
+  ctx.clearRect(0,0,w,h); grid(ctx,w,h); axes(ctx,cx,cy);
+  const rad=deg*Math.PI/180;
+  ctx.strokeStyle='rgba(79,195,247,0.15)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.arc(cx,cy,44,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  cube(ctx,cx,cy, 0,rad,0, 38,38);
+  label(ctx,`Ry: ${deg}°  cos=${Math.cos(rad).toFixed(2)}`,8,16);
+}
+document.getElementById('ry-a').oninput=function(){
+  cancelAnimationFrame(ryAnim); ryAnim=null;
+  document.getElementById('ry-v').textContent=this.value+'°';
+  drawRY(+this.value);
+};
+function resetRY(){ cancelAnimationFrame(ryAnim); ryAnim=null; document.getElementById('ry-a').value=0; document.getElementById('ry-v').textContent='0°'; drawRY(0); }
+function animRY(){ cancelAnimationFrame(ryAnim); let a=0; const s=()=>{ a=(a+2)%360; document.getElementById('ry-a').value=a; document.getElementById('ry-v').textContent=a+'°'; drawRY(a); ryAnim=requestAnimationFrame(s); }; s(); }
+drawRY(0);
+
+/* ═══════════════════════════════════════════
+   ROTATION Z DEMO
+═══════════════════════════════════════════ */
+let rzAnim=null;
+function drawRZ(deg){
+  const c=document.getElementById('cv-rz'), ctx=c.getContext('2d');
+  const w=c.width,h=c.height,cx=w/2,cy=h/2;
+  ctx.clearRect(0,0,w,h); grid(ctx,w,h); axes(ctx,cx,cy);
+  const rad=deg*Math.PI/180;
+  ctx.strokeStyle='rgba(0,230,118,0.15)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.arc(cx,cy,48,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  const dotX=cx+48*Math.cos(rad), dotY=cy+48*Math.sin(rad);
+  ctx.beginPath(); ctx.arc(dotX,dotY,4,0,Math.PI*2); ctx.fillStyle='#FFE81A'; ctx.fill();
+  ctx.strokeStyle='rgba(0,230,118,0.6)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(cx,cy,52,0,rad); ctx.stroke();
+  cube(ctx,cx,cy, 0,0,rad, 38,38);
+  label(ctx,`Rz: ${deg}°  (X·cosθ − Y·sinθ)`,8,16);
+}
+document.getElementById('rz-a').oninput=function(){
+  cancelAnimationFrame(rzAnim); rzAnim=null;
+  document.getElementById('rz-v').textContent=this.value+'°';
+  drawRZ(+this.value);
+};
+function resetRZ(){ cancelAnimationFrame(rzAnim); rzAnim=null; document.getElementById('rz-a').value=0; document.getElementById('rz-v').textContent='0°'; drawRZ(0); }
+function animRZ(){ cancelAnimationFrame(rzAnim); let a=0; const s=()=>{ a=(a+2)%360; document.getElementById('rz-a').value=a; document.getElementById('rz-v').textContent=a+'°'; drawRZ(a); rzAnim=requestAnimationFrame(s); }; s(); }
+drawRZ(0);
+
+/* ═══════════════════════════════════════════
+   SCALING DEMO
+═══════════════════════════════════════════ */
+let scaleAnim=null;
+function drawScale(sx,sy,sz){
+  const c=document.getElementById('cv-scale'), ctx=c.getContext('2d');
+  const w=c.width,h=c.height,cx=w/2,cy=h/2;
+  ctx.clearRect(0,0,w,h); grid(ctx,w,h); axes(ctx,cx,cy);
+  // ghost
+  ctx.globalAlpha=0.14; cube(ctx,cx,cy, .3,.3,0, 36,36); ctx.globalAlpha=1;
+  cube(ctx,cx,cy, .3,.3,0, 36*sx,36*sy);
+  // bounding box indicator
+  const bx=36*sx, by=36*sy;
+  ctx.strokeStyle='rgba(255,232,26,0.22)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.strokeRect(cx-bx,cy-by,bx*2,by*2); ctx.setLineDash([]);
+  [[cx+bx,cy],[cx-bx,cy],[cx,cy+by],[cx,cy-by]].forEach(([x,y])=>{
+    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fillStyle='#FFE81A'; ctx.fill();
+  });
+  label(ctx,`S(${sx.toFixed(1)}, ${sy.toFixed(1)}, ${sz.toFixed(1)})`,8,16);
+}
+function syncScale(){
+  cancelAnimationFrame(scaleAnim); scaleAnim=null;
+  const sx=document.getElementById('sx').value/100;
+  const sy=document.getElementById('sy').value/100;
+  const sz=document.getElementById('sz').value/100;
+  document.getElementById('sx-v').textContent=sx.toFixed(1);
+  document.getElementById('sy-v').textContent=sy.toFixed(1);
+  document.getElementById('sz-v').textContent=sz.toFixed(1);
+  drawScale(sx,sy,sz);
+}
+document.getElementById('sx').oninput=
+document.getElementById('sy').oninput=
+document.getElementById('sz').oninput=syncScale;
+function resetScale(){
+  cancelAnimationFrame(scaleAnim); scaleAnim=null;
+  ['sx','sy','sz'].forEach(id=>{ document.getElementById(id).value=100; document.getElementById(id).dispatchEvent(new Event('input')); });
+  drawScale(1,1,1);
+}
+function animScale(){
+  cancelAnimationFrame(scaleAnim);
+  let t=0;
+  const s=()=>{
+    t+=0.04; const v=1+Math.sin(t)*.5;
+    document.getElementById('sx').value=v*100; document.getElementById('sx-v').textContent=v.toFixed(1);
+    document.getElementById('sy').value=v*100; document.getElementById('sy-v').textContent=v.toFixed(1);
+    document.getElementById('sz').value=v*100; document.getElementById('sz-v').textContent=v.toFixed(1);
+    drawScale(v,v,v);
+    scaleAnim=requestAnimationFrame(s);
+  };
+  s();
+}
+drawScale(1,1,1);
+
+/* ═══════════════════════════════════════════
+   MINI GAME
+═══════════════════════════════════════════ */
+const Qs=[
+  {type:'ry', desc:'The cube is turning left to right'},
+  {type:'trans-x', desc:'The cube is sliding to the right'},
+  {type:'rz', desc:'The cube is rolling clockwise'},
+  {type:'scale', desc:'The cube is growing uniformly'},
+  {type:'rx', desc:'The cube is pitching nose-down'},
+  {type:'trans-y', desc:'The cube is moving upward'},
+  {type:'scale-x', desc:'The cube is being stretched horizontally'},
+  {type:'rz-ccw', desc:'The cube is rolling counter-clockwise'},
+  {type:'ry-back', desc:'The back face is rotating to the front'},
+  {type:'rx-up', desc:'The cube is pitching nose-up'},
+];
+const ANSWERS={
+  'ry':'Rotation around Y-Axis (Yaw)',
+  'trans-x':'Translation (TX positive)',
+  'rz':'Rotation around Z-Axis (Roll)',
+  'scale':'Uniform Scaling',
+  'rx':'Rotation around X-Axis (Pitch)',
+  'trans-y':'Translation (TY positive)',
+  'scale-x':'Non-Uniform Scaling (Sx)',
+  'rz-ccw':'Rotation around Z-Axis (Roll)',
+  'ry-back':'Rotation around Y-Axis (Yaw)',
+  'rx-up':'Rotation around X-Axis (Pitch)',
+};
+const ALL_OPTS=[
+  'Translation (TX positive)','Translation (TY positive)',
+  'Rotation around X-Axis (Pitch)','Rotation around Y-Axis (Yaw)',
+  'Rotation around Z-Axis (Roll)','Uniform Scaling','Non-Uniform Scaling (Sx)',
+];
+const RANKS=[
+  {min:0,title:'Youngling',msg:'Keep training, young one.'},
+  {min:3,title:'Padawan',msg:'The Force stirs within you.'},
+  {min:6,title:'Jedi Knight',msg:'Your skills are considerable.'},
+  {min:9,title:'Jedi Master',msg:'The Council is impressed.'},
+  {min:10,title:'Grand Master',msg:'Flawless mastery of the matrix!'},
+];
+
+let G={score:0,qi:0,running:false,tid:null,aid:null,tv:0};
+
+function gameStart(){
+  document.getElementById('gbtn').style.display='none';
+  document.getElementById('govr').style.display='none';
+  document.getElementById('gchoices').style.display='grid';
+  G={score:0,qi:0,running:true,tid:null,aid:null,tv:0};
+  document.getElementById('gscore').textContent='0';
+  document.getElementById('grank').textContent='—';
+  loadQ();
+}
+
+function loadQ(){
+  if(G.qi>=Qs.length){endGame();return;}
+  cancelAnimationFrame(G.aid);
+  const q=Qs[G.qi];
+  document.getElementById('gq').textContent=G.qi+1;
+  document.getElementById('gquestion').textContent=`What transformation is shown? — "${q.desc}"`;
+  document.getElementById('gfeedback').textContent='';
+  clearInterval(G.tid);
+  G.tv=12; document.getElementById('gtimer').textContent=G.tv+'s';
+  G.tid=setInterval(()=>{ G.tv--; document.getElementById('gtimer').textContent=G.tv+'s'; if(G.tv<=0){clearInterval(G.tid); document.getElementById('gfeedback').textContent='⚠ Time up — '+ANSWERS[q.type]; setTimeout(()=>{G.qi++;loadQ();},1600);} },1000);
+  const correct=ANSWERS[q.type];
+  const wrongs=ALL_OPTS.filter(a=>a!==correct).sort(()=>Math.random()-.5).slice(0,3);
+  const opts=[correct,...wrongs].sort(()=>Math.random()-.5);
+  const gc=document.getElementById('gchoices'); gc.innerHTML='';
+  opts.forEach(o=>{
+    const b=document.createElement('button'); b.className='gchoice'; b.textContent=o;
+    b.onclick=()=>pick(o,correct,q.type);
+    gc.appendChild(b);
+  });
+  animateGame(q.type);
+}
+
+function pick(chosen,correct,type){
+  clearInterval(G.tid); cancelAnimationFrame(G.aid);
+  document.querySelectorAll('.gchoice').forEach(b=>{
+    if(b.textContent===correct) b.classList.add('correct');
+    else if(b.textContent===chosen&&chosen!==correct) b.classList.add('wrong');
+    b.onclick=null;
+  });
+  if(chosen===correct){G.score++; document.getElementById('gscore').textContent=G.score; document.getElementById('gfeedback').textContent='✓ Correct — well done, Padawan!';}
+  else document.getElementById('gfeedback').textContent='✗ Incorrect — correct: '+correct;
+  const s=G.score; let rk=RANKS[0]; RANKS.forEach(r=>{ if(s>=r.min)rk=r; });
+  document.getElementById('grank').textContent=rk.title;
+  setTimeout(()=>{G.qi++;loadQ();},1700);
+}
+
+function endGame(){
+  clearInterval(G.tid); cancelAnimationFrame(G.aid);
+  document.getElementById('gchoices').style.display='none';
+  document.getElementById('gquestion').textContent='Training complete.';
+  document.getElementById('gfeedback').textContent='';
+  const s=G.score; let rk=RANKS[0]; RANKS.forEach(r=>{ if(s>=r.min)rk=r; });
+  document.getElementById('gfinal').textContent=`Score: ${s} / 10`;
+  document.getElementById('granktxt').textContent=`⭐ ${rk.title} — ${rk.msg}`;
+  document.getElementById('govr').style.display='block';
+  idleGame();
+}
+
+function idleGame(){
+  const c=document.getElementById('gc'), ctx=c.getContext('2d');
+  let t=0;
+  const s=()=>{
+    if(G.running) return;
+    ctx.clearRect(0,0,c.width,c.height); grid(ctx,c.width,c.height);
+    t+=0.02; cube(ctx,c.width/2,c.height/2, t*.4, t*.7, t*.2, 42,42);
+    G.aid=requestAnimationFrame(s);
+  };
+  s();
+}
+
+function animateGame(type){
+  const c=document.getElementById('gc'), ctx=c.getContext('2d');
+  const w=c.width,h=c.height,cx=w/2,cy=h/2;
+  let t=0;
+  const s=()=>{
+    ctx.clearRect(0,0,w,h); grid(ctx,w,h); axes(ctx,cx,cy,44);
+    t+=0.03;
+    switch(type){
+      case 'ry': cube(ctx,cx,cy, 0,t,0, 40,40); break;
+      case 'ry-back': cube(ctx,cx,cy, 0,t+Math.PI,0, 40,40); break;
+      case 'trans-x': cube(ctx,cx+Math.sin(t)*70,cy, 0,0,0, 36,36); break;
+      case 'trans-y': cube(ctx,cx,cy-Math.abs(Math.sin(t))*60, 0,0,0, 36,36); break;
+      case 'rz': cube(ctx,cx,cy, 0,0,t, 40,40); break;
+      case 'rz-ccw': cube(ctx,cx,cy, 0,0,-t, 40,40); break;
+      case 'rx': cube(ctx,cx,cy, t,0,0, 40,40); break;
+      case 'rx-up': cube(ctx,cx,cy, -t,0,0, 40,40); break;
+      case 'scale': { const v=1+Math.sin(t)*.5; cube(ctx,cx,cy, .3,.3,0, 40*v,40*v); break; }
+      case 'scale-x': { const v=.5+Math.abs(Math.sin(t))*.9; cube(ctx,cx,cy, 0,0,0, 40*v,36); break; }
+    }
+    G.aid=requestAnimationFrame(s);
+  };
+  s();
+}
+
+// idle on load
+G.running=false; idleGame();
+</script>
+</body>
+</html>
